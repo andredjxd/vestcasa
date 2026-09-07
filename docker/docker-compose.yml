@@ -15,6 +15,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        APACHE_CONF: vestcasa-root.conf
     image: vestcasa-app:latest
     environment:
       - BD_SERVIDOR=mysql

@@ -38,8 +38,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite ssl \
     && rm -rf /var/lib/apt/lists/*
 
+ARG APACHE_CONF=vestcasa.conf
 COPY docker/php/vestcasa.ini /usr/local/etc/php/conf.d/zz-vestcasa.ini
-COPY docker/apache/vestcasa.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/apache/${APACHE_CONF} /etc/apache2/sites-available/000-default.conf
 
 COPY . /var/www/html/vestcasa
 RUN chown -R www-data:www-data /var/www/html/vestcasa
