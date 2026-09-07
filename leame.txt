@@ -1,0 +1,37 @@
+No arquivo `php.ini`, faça as seguintes alterações:
+
+- Altere de: `max_execution_time = 120` para: `max_execution_time = 2400`
+- Altere de: `max_input_time = 60` para: `max_input_time = 600`
+
+Essas modificações aumentam o tempo máximo de execução e o tempo máximo de processamento de entradas, permitindo que scripts mais longos e uploads maiores sejam processados sem interrupções.
+
+Habilitar a extensão ZipArchive no PHP
+
+Abra o arquivo php.ini no seu XAMPP. O caminho padrão geralmente é:
+C:\xampp\php\php.ini
+Procure pela linha:
+;extension=zip
+Remova o ponto e vírgula (;) no início da linha para ativar a extensão:
+extension=zip
+Salve o arquivo e reinicie o Apache pelo painel do XAMPP.
+
+
+CADASTRO
+│
+├── vest_produto
+├── vest_produto_codigo_barras
+│
+OPERACIONAL
+│
+├── vest_rme_recebimento
+├── vest_rme_recebimento_itens
+├── vest_rme_recebimento_divergencias
+│
+ESTOQUE
+│
+├── vest_produto_extrato
+├── vest_produto_estoque
+│
+AUDITORIA
+│
+└── vest_produto_movimentacao_log

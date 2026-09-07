@@ -1,0 +1,12 @@
+.git
+.gitignore
+.dockerignore
+docker/docker-compose*.yml
+docker/.env
+.env
+assets/python
+frontend
+docs
+screenshots
+assets/_db/*.sql
+assets/_db/dados

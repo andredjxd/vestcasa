@@ -1,0 +1,48 @@
+# Deploy em vestcasa.a2teck.com.br - servidor Docker Swarm compartilhado
+# com Traefik ja rodando (roteamento por Host + TLS automatico via
+# Let's Encrypt). Este servico so entra na rede "traefik_public"
+# (externa, ja existente) - nao publica porta nenhuma direto no host.
+#
+# Banco: usa o MySQL/Percona que ja roda neste mesmo servidor
+# (servico "mysql", mantido sincronizado com o banco interno pelo
+# sync_vestcasa.py). A tabela vest_relatorio_fila_execucao NAO
+# replica de proposito, entao a Fila de Execucao nao funciona aqui.
+#
+# Rodar a partir da raiz do projeto:
+#   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
+services:
+  vestcasa-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: vestcasa-app:latest
+    environment:
+      - BD_SERVIDOR=mysql
+      - BD_USUARIO=root
+      - BD_SENHA=${BD_SENHA}
+      - BD_BANCO=vestcasa
+      - BD_BANCOA=grupovestcasa
+    volumes:
+      - vestcasa_uploads:/var/www/html/vestcasa/uploads
+      - vestcasa_arquivos:/var/www/html/vestcasa/assets/arquivos
+      - vestcasa_imgprodutos:/var/www/html/vestcasa/assets/img/produtos
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+      - "traefik.http.routers.vestcasa.rule=Host(`vestcasa.a2teck.com.br`)"
+      - "traefik.http.routers.vestcasa.entrypoints=web,websecure"
+      - "traefik.http.routers.vestcasa.tls=true"
+      - "traefik.http.routers.vestcasa.tls.certresolver=leresolver"
+      - "traefik.http.services.vestcasa.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+networks:
+  traefik_public:
+    external: true
+
+volumes:
+  vestcasa_uploads:
+  vestcasa_arquivos:
+  vestcasa_imgprodutos:

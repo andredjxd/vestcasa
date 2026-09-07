@@ -1,0 +1,31 @@
+# Credenciais e configuracao local - nunca versionar
+.env
+
+# Workers Python - nao fazem parte do container, ficam so no LXC interno
+assets/python/
+
+# Dumps e backups do banco - podem conter dados reais
+assets/_db/*.sql
+assets/_db/dados/
+
+# Estudo de migracao para Vue - fora do escopo deste deploy
+frontend/
+docs/
+
+# Artefatos locais / IDE
+screenshots/
+.claude/
+*.log
+
+# Dados de usuario reais - implantacao nova comeca vazia (volumes Docker)
+uploads/
+assets/img/produtos/
+assets/arquivos/*.xlsx
+
+# Artefatos de bug (Fix #5 atualizaAvarias, ver memoria) - fotos reais soltas
+# no lugar errado, nao fazem parte do codigo da aplicacao
+assets/7908871909886/
+assets/QUEBRADO/
+
+# Docker
+docker/.env

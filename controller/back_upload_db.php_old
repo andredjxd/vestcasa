@@ -1,0 +1,477 @@
+<?php
+include '../assets/_db/db.php';
+include '../assets/_php/SimpleXLS.php';
+function trataValor($va){
+    $a = str_replace(".","", $va);
+    $b = str_replace(",",".", $a);
+    return $b;
+}
+function rmNegat($a){
+    $b = str_replace(".","", $a);
+    $c = str_replace(",",".", $b);
+    $d = substr($c,-1);
+    if ($d == "-"){
+        $e = str_replace("-","", $c);
+        $g = str_split($e);
+        array_unshift($g, "-");
+        $h = implode($g);
+        $f = floatval($h);
+    }else{
+        $f = floatval($c);
+    }
+    return $f;
+}
+function pega($ii,$ff,$a){
+    for ($i=$ii; $i < $ff; $i++) {
+      //echo $a[$i]."<br>";
+      $codigo[] = "$a[$i]";
+      $imp = implode($codigo);
+      //print_r ($imp);
+    }
+    return $imp;
+}
+function datadb($d){
+    $n = explode('/',$d);
+    $r = "$n[2]$n[1]$n[0]";
+    return $r;
+}
+$rel = $_POST['nome'];
+
+// $rel = "SVDBIA2";
+sleep(1);
+if ($rel == 'SMGOI13'){
+    $abreArq = '../assets/arquivos/'.$rel.'.xls';
+    if (file_exists($abreArq)){
+        $limpa = $cnx -> query("DELETE FROM logman3__smgoi13");
+        if ($excel=SimpleXLS::parse($abreArq)){
+            $separaData = explode(' ',$excel->rows()[0][28]);
+            $data = $separaData[3];
+            $posicao = 1;
+            foreach($excel->rows() as $key => $coluna){
+                if($key==0){
+                    //echo "Arquivo Vazio!!!";
+                }else{
+                    for($i=0; $i<1; $i++){
+                        $codigo_dig       = explode('-',$coluna[0]);
+                        $codigo           = $codigo_dig[0];
+                        $sub_codigo       = $codigo_dig[1];
+                        $descricao        = $coluna[2];
+                        $emb              = $coluna[3];
+                        $setor            = $coluna[4];
+                        $setorSepara      = explode(' - ',$setor);
+                        $setor_numero     = $setorSepara[0];
+                        $setor_loja       = $setorSepara[1];
+                        $compradoComp     = $coluna[6];
+                        $compradoComp     = explode('-',$coluna[6]);
+                        $compradorNom     = $compradoComp[1];
+                        $dt_ult_entr      = $coluna[15];
+                        $qtd_ult_entr     = $coluna[17];
+                        $est_emb1         = $coluna[21];
+                        $est_emb9         = $coluna[22];
+                        $custoMedio       = $coluna[23];
+                        $preco_venda      = $coluna[24];
+                        $rent             = $coluna[25];
+                        $qtd_venda_emb1   = $coluna[26];
+                        $idade            = $coluna[27];
+                        $nao_vende        = $coluna[28];
+                        
+                        $posicao = $posicao + 1;
+                        $valorEstoqueCxa = $est_emb1 * $custoMedio;
+                        $embSepara       = explode(' ',$emb);
+                        $result = count($embSepara);
+
+                        $innerJoin = "$embSepara[0]|$embSepara[1]|$embSepara[3]|$embSepara[5]";
+                        $QuantCaixa = ($embSepara[1] * $embSepara[3]);
+                        $preco_venda_und = $preco_venda/$QuantCaixa;
+                        $totalEstoque    = $valorEstoqueCxa; 
+                        $ultimo = end($embSepara);        
+
+                        $query = "INSERT INTO `logman3__smgoi13`(`data`, `codigo`, `sub_cod`, `descricao`, `emb`, `setor_numero`, `setor_loja`, `comprador`, `dt_ult_entr`, `qtd_ult_entr`, `est_emb1`, `est_emb9`, `custo_medio`, `preco_venda`, `rent`, `total_estoque`, `qtd_venda_emb1`, `idade`, `nao_vende`, `preco_venda_und`, `gramatura`) 
+                                    VALUES ('$data', '$codigo', '$sub_codigo', '$descricao', '$emb', '$setor_numero', '$setor_loja', '$compradorNom', '$dt_ult_entr', '$qtd_ult_entr', '$est_emb1', '$est_emb9', '$custoMedio', '$preco_venda', '$rent', '$totalEstoque', '$qtd_venda_emb1', '$idade', '$nao_vende','$preco_venda_und','$ultimo')";
+                        $cnx->query($query);
+                    }
+                    
+                }
+            }
+            echo 101;
+            $cnx->close();
+        }else{
+            echo SimpleXLS::parseError();
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'SRTBI03'){
+    $data = $_POST['data'];
+    $abreArq = '../assets/arquivos/'.$rel.'.csv';
+    // $date = new DateTime();
+    // $newdata = $date->format('d/m/Y');
+    $newdata = datadb($data);
+    if (file_exists($abreArq)){
+        $ext = explode(".",$abreArq);
+        $extensao = end($ext);
+        if($extensao != "csv"){
+            echo 104;
+        }else{
+            $row = 0;
+            $abreArqu = fopen($abreArq, 'r');
+            $limpa = $cnx->query("DELETE FROM logman3__srtbi03 WHERE data = $newdata");
+            while(($coluna = fgetcsv($abreArqu, 2048, ";")) !== FALSE) {
+                $conta = count($coluna);
+                $row++;
+                // echo $row.'='.$conta."<br>";
+                if($conta == 16){
+                    $in = 1;
+                    if($coluna[0] == 'CODIGO'){
+                        $in = 2;
+                    }
+                    if($row > $in){
+                        $codigo          = $coluna[0];
+                        $sub_codigo      = $coluna[1];
+                        $descricao       = $coluna[2];
+                        $emb             = $coluna[3];
+                        $emb1            = $coluna[4];
+                        $emb9            = $coluna[5];
+                        $preco_medio     = trataValor($coluna[6]);
+                        $prazo           = trataValor($coluna[7]);
+                        $vlr_venda       = trataValor($coluna[8]);
+                        $variacao        = rmNegat(trim($coluna[9]));
+                        $rent            = rmNegat(trim($coluna[10]));
+                        $previsao        = trataValor($coluna[11]);
+                        $avaria          = trataValor($coluna[12]);
+                        $ajuste          = trataValor($coluna[13]);
+                        $resultado       = trataValor($coluna[14]);
+                        $perdas          = floatval($ajuste) - floatval($avaria);
+                        $resul           = floatval($resultado) - $perdas; 
+                        $t_analise       = $coluna[15];
+                        //var_dump ($variacao);
+                        if($t_analise == 'VENDAS'){
+                            $querysrt03 = "INSERT INTO `logman3__srtbi03`(`data`, `codigo`, `sub`, `descricao`, `emb`, `emb1`, `emb9`, `preco_medio`, `prazo`, `valor_venda`, `variacao`, `rent`, `provisao`, `avaria`, `ajuste`, `resultado`, `tipo_analise`, `resul_ll`) 
+                                            VALUES ('$newdata', '$codigo', '$sub_codigo', '$descricao', '$emb', '$emb1', '$emb9', '$preco_medio', '$prazo', '$vlr_venda', '$variacao', '$rent', '$previsao', '$avaria', '$ajuste', '$resultado', '$t_analise', '$resul')";
+                            $exe = $cnx->query($querysrt03);
+                        }
+                    }
+                } 
+            }
+            $cnx->close();
+            echo 101;
+            fclose($abreArqu);
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'SVDBI62'){
+    $abreArq = '../assets/arquivos/'.$rel.'.csv';
+    $date = new DateTime();
+    $newdata = $date->format('d/m/Y');
+    $dataverif = $date->format('Ymd');
+    if (file_exists($abreArq)){
+        $ext = explode(".",$abreArq);
+        $extensao = end($ext);
+        if($extensao != "csv"){
+            echo 104;
+        }else{
+            $file = file($abreArq);
+            $verdata = explode(";",$file[count($file)-1])[1];
+            $dataArq = datadb($verdata);
+            $a = $cnx->query("SELECT data FROM `logman3__svdbi62`  WHERE data = '$dataArq'")->num_rows;
+            // var_dump($a);
+            if($a == 0){  
+                $abreArqu = fopen($abreArq, 'r');      
+                // $limpa = $cnx->query("DELETE FROM logman3__svdbi62 WHERE data = '$dataArq'");
+                $row = 0;
+                while(($coluna = fgetcsv($abreArqu, 2048, ";")) !== FALSE) { 
+                    $conta = count($coluna);
+                    $row++;
+                    // echo $row.'='.$conta."<br>";
+                    // if($conta == 16){
+                    $in = 1;
+                    if($coluna[0] == 'FILIAL'){
+                        $in = 2;
+                    }
+                    if($row > $in){
+                        $filial          = $coluna[0];
+                        $data            = datadb($coluna[1]);
+                        $grupo           = $coluna[2];
+                        $SeparaGrupo     = explode('-',$grupo);
+                        $grupNum         = $SeparaGrupo[0];
+                        $grupNom         = $SeparaGrupo[1];
+                        $vendaDia        = trataValor($coluna[5]);
+                        $rentDia         = trataValor($coluna[6]);
+                        $vendaMes        = trataValor($coluna[12]);
+                        $rentMes         = trataValor($coluna[13]);
+                        $vendaProj       = trataValor($coluna[21]);
+                        $rentProj        = trataValor($coluna[22]);
+                        // echo $data.' | '.$grupNum.' | '.$vendaDia.'<br>';
+                        $querysvd62 = "INSERT INTO `logman3__svdbi62`(`data`, `grupoNume`, `grupoNome`, `vendaDia`, `rentDia`, `vendaMes`, `rentMes`, `vendaProj`, `rentProj`, `filial`) 
+                                        VALUES ('$data', '$grupNum', '$grupNom', '$vendaDia', '$rentDia', '$vendaMes', '$rentMes', '$vendaProj', '$rentProj', '$filial')";
+                        $exe = $cnx->query($querysvd62);
+                        // }
+                    }
+                    // } 
+                }//WHILE
+                $cnx->close();
+                echo 101;
+                fclose($abreArqu);
+            }else{
+                echo "Arquivo já foi atualizadoo!!!";
+            }
+            
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'SUBSIDIO'){
+    $abreArq = '../assets/arquivos/'.$rel.'.txt';
+    if (file_exists($abreArq)){
+        $ext = explode(".",$abreArq);
+        $extensao = end($ext);
+        if($extensao != "txt"){
+            echo 104;
+        }else{
+            $l = 0;
+            $txt_file = fopen($abreArq,'r');
+            while ($line = fgets($txt_file)) {
+                $a = str_split($line);
+                if($l == 0 ){
+                    $data     = datadb(trim(pega(186,197,$a)));
+                    $codfil   = trim(pega(8,11,$a));
+                  }elseif($l >= 5){
+                    $comprador  = trim(pega(0,5,$a)); // 5
+                    $cod        = trim(pega(7,13,$a)); // 6
+                    $desc       = trim(pega(13,50,$a)); // 37
+                    $emb        = trim(pega(50,71,$a)); // 21
+                    $cxa        = trim(pega(71,76,$a)); // 5
+                    $und        = trim(pega(77,80,$a)); // 3
+                    $pro        = trim(pega(81,113,$a)); // 32
+                    $subVlr     = trataValor(trim(pega(114,121,$a)));
+                    $subUnd     = trim(pega(122,130,$a));
+                    $datVal     = datadb(trim(pega(132,140,$a))); // 8
+                    $totVal     = trataValor(trim(pega(141,150,$a))); // 9
+                    $observ     = trim(pega(161,210,$a)); // 49
+                    //var_dump($cod);
+                    //echo "$data - $codfil - $comprador - $cod - $desc - $emb - $cxa - $und - $pro - $subVlr - $subUnd - $datVal - $totVal - $observ<br>";
+                    $sqlsub = $cnx->query("SELECT dataadd,codigo FROM `logman3__subsidio` WHERE dataadd = '$data' AND codigo = '$cod'");
+                    $result = $sqlsub->fetch_array(MYSQLI_ASSOC);
+                    if(!$result){
+                      $query = "INSERT INTO `logman3__subsidio`( `dataadd`, `filial`,`comprador`, `codigo`, `descricao`, `emb`, `cxa`, `und`, `promocao`, `vlr_und`, `qtd_und`, `validade`, `vlr_total`, `obs`) 
+                            VALUES ('$data', '$codfil', '$comprador', '$cod', '$desc', '$emb', '$cxa', '$und', '$pro', '$subVlr', '$subUnd', '$datVal', '$totVal', '$observ')";
+                      $cnx -> query($query);
+                    }
+                    //echo "<br>";
+                  }
+                $l++;
+            }
+            echo 101;
+            fclose($txt_file);
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'SVDBIA2'){
+    $abreArq = '../assets/arquivos/'.$rel.'.csv';
+    $date = new DateTime();
+    $newdata = $date->format('d/m/Y');
+    $datanow = $date->format('Ymd');
+    if (file_exists($abreArq)){
+        $ext = explode(".",$abreArq);
+        $extensao = end($ext);
+        if($extensao != "csv"){
+            echo 104;
+        }else{
+            $row = 0;
+            $abreArqu = fopen($abreArq, 'r');
+            $limpa = $cnx->query("DELETE FROM logman3__svdbia2");
+            while(($coluna = fgetcsv($abreArqu, 2048, ";")) !== FALSE) {
+                $conta = count($coluna);
+                $row++;
+                // echo $row.'='.$conta."<br>";
+                if($conta == 17){
+                    $in = 1;
+                    if($coluna[0] == 'CODIGO'){
+                        $in = 2;
+                    }
+                    if($row > $in){
+                        $codComprad             = intval($coluna[0]);
+                        $nomComprad             = $coluna[1];
+                        $cpfCNPJ                = $coluna[2];
+                        $razaoSocial            = $coluna[3];
+                        $codCompleto            = explode('-',$coluna[4]);
+                        $codigo                 = intval($codCompleto[0]);
+                        $sub_codigo             = intval($codCompleto[1]);
+                        $descricao              = $coluna[5];
+                        $mult1                  = intval($coluna[6]);
+                        $mult2                  = intval($coluna[7]);
+                        $emb1                   = intval($coluna[8]);
+                        $emb9                   = intval($coluna[9]);
+                        $dtIni                  = datadb($coluna[10]);
+                        $dtFin                  = datadb($coluna[11]);
+                        $qtdVerba               = intval($coluna[12]);
+                        $vlrVerba               = trataValor($coluna[13]);
+                        $qtdMovimento           = intval($coluna[14]);
+                        $vlrMovimento           = trataValor($coluna[15]);
+                        $canalVenda             = trim($coluna[16]);
+                        // var_dump($codigo);
+                        // echo $codComprad.' - '.$nomComprad.' - '.$cpfCNPJ.' - '.$razaoSocial.' - '.$codigo.' - '.$sub_codigo.' - '.$descricao.' - '.$mult1.' - '.$mult2.' - '.$emb1.' - '.$emb9.' - '.$dtIni.' - '.$dtFin.' - '.$qtdVerba.' - '.$vlrVerba.' - '.$qtdMovimento.' - '.$vlrMovimento.' - '.$canalVenda.'<br>';
+                        
+                        $querysvdbia2 = "INSERT INTO `logman3__svdbia2`(`data`,`cod_comprador`, `nom_comprador`, `cpfcnpj`, `razaosocial`, 
+                            `codigo`, `sub`, `descricao`, `mult1`, `mult2`, `emb1`, `emb2`, `datainicial`, `datafinal`, `qtdverba`, 
+                            `vlrverba`, `qtdmovimento`, `vlrmovimento`, `canalvenda`) 
+
+                            VALUES ('$datanow','$codComprad','$nomComprad','$cpfCNPJ','$razaoSocial','$codigo','$sub_codigo',
+                            '$descricao','$mult1','$mult2','$emb1','$emb9','$dtIni','$dtFin','$qtdVerba',
+                            '$vlrVerba','$qtdMovimento','$vlrMovimento','$canalVenda')";
+                        $exe = $cnx->query($querysvdbia2);
+
+                    }
+                } 
+            }
+            $cnx->close();
+            echo 101;
+            fclose($abreArqu);
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'SAEBI51-DIARIO'){
+    $abreArq = '../assets/arquivos/'.$rel.'.xls';
+    if (file_exists($abreArq)){
+        // $limpa = $cnx -> query("DELETE FROM logman3__smgoi13");
+        if ($excel=SimpleXLS::parse($abreArq)){
+            $posicao = 1;
+
+            $datasrel = array();
+            foreach($excel->rows() as $key => $coluna){
+                if($key==0){
+                    //echo "Arquivo Vazio!!!";
+                }else{
+                    for($i=0; $i<1; $i++){
+                        array_push($datasrel, "$coluna[10]");
+                    }
+                }
+            }
+            $lista = array_unique($datasrel);
+            $countlista = count($lista);
+            
+            // print_r($countlista);
+            if ($countlista == 1){
+                // print_r($lista[0]);
+                $data         = $lista[0];
+                $dat          = explode('/',$data);
+                $dataconsulta      = $dat[2].''.$dat[1].''.$dat[0];
+                // $dataconsulta = date('Ydm',strtotime($lista[0]));
+                $cnx->query("DELETE FROM `logman3__saeoi51_history` WHERE dataeve = '$dataconsulta'");
+                foreach($excel->rows() as $key => $coluna){
+                    if($key==0){
+                        //echo "Arquivo Vazio!!!";
+                    }else{
+                        for($i=0; $i<1; $i++){
+                            $evento           = $coluna[1];
+                            $codigoSepara     = explode('-',$coluna[3]);
+                            $codigo           = $codigoSepara[0];
+                            $subCodigo        = $codigoSepara[1];
+                            $descricao        = $coluna[5];
+                            $emb              = $coluna[6];
+                            $emb1             = $coluna[7];
+                            $emb9             = $coluna[8];
+                            $valor            = $coluna[9];
+                            $data             = $coluna[10];
+                            $dat              = explode('/',$data);
+                            $dataEve          = $dat[2].''.$dat[1].''.$dat[0];
+                            $operacao         = $coluna[13];
+                            $setorComp        = $coluna[21];
+                            $grupo            = $coluna[17];
+                            $setor            = $coluna[21];
+    
+                            $s = str_split($setorComp);
+                            $setorNumero = "$s[0]$s[1]$s[2]";
+                            $d = str_split($setorComp, 3);
+                            $countArray = count($d) ;
+                            $setorDescricao = "";
+                            for($i=1; $i<$countArray; $i++){
+                                // echo $d[$i]."<br>";
+                                $setorDescricao .=$d[$i];
+                            }
+                            // echo $setorDescricao."".$dataEve."<br>";
+                            $query = "INSERT INTO logman3__saeoi51_history (`evento`, `codigo`, `sub`, `descricao`, `emb`, `emb1`, `emb9`, `valor`, `dataeve`, `operacao`, `setorNumero`, `setorDescricao`, `grupo`) 
+                                                                    VALUES ('$evento',' $codigo','$subCodigo','$descricao','$emb','$emb1','$emb9','$valor','$dataEve','$operacao','$setorNumero','$setorDescricao','$grupo')";
+                            $cnx -> query($query);
+                        }
+                    }
+                }
+                echo 101;
+                $cnx->close();
+            }else{
+                echo "Arquivo com mais de ".$countlista." data(s) !!! <br> Selecione arquivo que somente 1 data !! ";
+            }
+        }else{
+            echo SimpleXLS::parseError();
+        }
+    }else{
+        echo 103;
+    }
+}elseif($rel == 'TERCEIROS'){
+    $abreArq = '../assets/arquivos/'.$rel.'.csv';
+    $date = new DateTime();
+    $newdata = $date->format('d/m/Y');
+    $datanow = $date->format('Ymd');
+    if (file_exists($abreArq)){
+        $ext = explode(".",$abreArq);
+        $extensao = end($ext);
+        if($extensao != "csv"){
+            echo 104;
+        }else{
+            $row = 0;
+            $abreArqu = fopen($abreArq, 'r');
+            $dataster = array();
+            while(($coluna = fgetcsv($abreArqu, 2048, ";")) !== FALSE) {
+                $conta = count($coluna);
+                $row++;
+                if($row > 1){
+                    $datater = datadb($coluna[2]);
+                    // echo $datater;
+                    array_push($dataster, "$datater");
+                }
+            }
+            $lista = array_unique($dataster);
+            $countlista = count($lista);
+            fclose($abreArqu);    
+
+            if ($countlista == 1){
+                $cnx->query("DELETE FROM `logman3__terceiros` WHERE data = '$lista[0]'");
+                // var_dump($lista[0]);
+                $abreArqu = fopen($abreArq, 'r');
+                $roww = 0;
+                while(($coluna = fgetcsv($abreArqu, 2048, ";")) !== FALSE) {
+                    $conta = count($coluna);
+                    $roww++;
+                    // echo " - ".$row.'='.$conta."<br>";
+                    if($roww > 1){
+                        $cpf              = $coluna[0];
+                        $nome             = $coluna[1];
+                        $data             = datadb($coluna[2]);
+                        $terceiro         = $coluna[4];
+                        $empresa          = $coluna[6];
+                        $codaut           = $coluna[7];
+                        $filial           = $coluna[8];
+                        // echo $cpf." - ".$nome." - ".$data." - ".$terceiro." - ".$empresa." - ".$codaut." - ".$filial."<br>";
+                        $queryterceiros = "INSERT INTO `logman3__terceiros`(`data`, `cpf`, `nome`, `tipo`, `empresa`, `codaut`, `filial`) 
+                                        VALUES ('$data','$cpf','$nome','$terceiro','$empresa','$codaut','$filial')";
+                        $cnx->query($queryterceiros);
+                    }
+                }
+                $cnx->close();
+                echo 101;
+                fclose($abreArqu);
+            }else{
+                echo "Arquivo com mais de ".$countlista." data(s) !!! <br> Selecione arquivo que somente 1 data !! ";
+            }
+        }
+    }else{
+        echo 103;
+    }
+    // echo "TERCEIROS";
+}else{
+    echo 102;
+}
+?>
