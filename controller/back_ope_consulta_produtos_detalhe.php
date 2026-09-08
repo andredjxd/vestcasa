@@ -216,9 +216,12 @@ if ($res6 && $res6->num_rows > 0) {
 }
 
 $query7 = "
-    SELECT sku, preco_clube, limitacao_clube, preco_max, limitacao_max, preco_varejo, limitacao_varejo, updated
-    FROM vest_relatorio_produto_precos
-    WHERE sku = ?;
+    SELECT vrpp.sku, vrpp.preco_clube, vrpp.limitacao_clube, vrpp.preco_max, vrpp.limitacao_max, vrpp.preco_varejo, vrpp.limitacao_varejo, vrpp.updated
+    FROM vest_relatorio_produto_precos vrpp
+    INNER JOIN vest_produto_codigo_barras vpcb
+        ON vpcb.codigo_barras = vrpp.codigobarra
+        AND vpcb.status = 1
+    WHERE vrpp.sku = ?;
 ";
 
 $stmt7 = $cnx->prepare($query7);
