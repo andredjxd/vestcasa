@@ -1,8 +1,16 @@
 # Credenciais e configuracao local - nunca versionar
 .env
 
-# Workers Python - nao fazem parte do container, ficam so no LXC interno
-assets/python/
+# Workers Python - rodam fora do container (host do a2teck), mas o
+# codigo fica versionado. So excluir credenciais e artefatos gerados.
+assets/python/.env
+assets/python/*.pkl
+assets/python/__pycache__/
+assets/python/screenshots/
+assets/python/chrome_profile_chamados/
+assets/python/*_old*.py
+assets/python/*teste*.py
+assets/python/*.py_old
 
 # Dumps e backups do banco - podem conter dados reais
 assets/_db/*.sql
@@ -16,6 +24,7 @@ docs/
 screenshots/
 .claude/
 *.log
+*.log.*
 
 # Dados de usuario reais - implantacao nova comeca vazia (volumes Docker)
 uploads/
