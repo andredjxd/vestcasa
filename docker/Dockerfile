@@ -4,6 +4,8 @@
 # (docker-compose local de teste), o volume simplesmente sobrepoe essa copia.
 FROM php:8.1-apache
 
+ENV TZ=America/Araguaina
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libfreetype6-dev \
         libjpeg62-turbo-dev \
@@ -14,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libffi-dev \
         libssl-dev \
         locales \
+        tzdata \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" \
         mysqli \
@@ -35,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ffi \
     && sed -i '/pt_BR.UTF-8/s/^# //' /etc/locale.gen \
     && locale-gen \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
     && a2enmod rewrite ssl \
     && rm -rf /var/lib/apt/lists/*
 
