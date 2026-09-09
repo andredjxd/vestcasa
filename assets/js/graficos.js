@@ -69,6 +69,12 @@ $(document).ready(function() {
                 vendas_chart_options
             );
             vendas_chart.render();
+
+            // Atualiza o tema do grafico ja renderizado quando o dark
+            // mode e alternado sem recarregar a pagina.
+            document.addEventListener('darkmodechange', function (e) {
+                vendas_chart.updateOptions({ theme: { mode: e.detail.isDark ? 'dark' : 'light' } });
+            });
         });
     };
     if (document.querySelector('#visitors-chart')) {

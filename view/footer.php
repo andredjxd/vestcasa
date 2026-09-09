@@ -112,6 +112,8 @@ function toggleDarkMode() {
     localStorage.setItem('dark-mode', isDark);
 
     atualizarIcone(isDark);
+
+    document.dispatchEvent(new CustomEvent('darkmodechange', { detail: { isDark } }));
 }
 
 function atualizarIcone(isDark) {
