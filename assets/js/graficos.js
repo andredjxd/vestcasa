@@ -67,7 +67,9 @@ $(document).ready(function() {
             vendas_chart.render();
         });
     };
-    GraficoVendas();
+    if (document.querySelector('#visitors-chart')) {
+        GraficoVendas();
+    }
     
     // const GraficoROR = function () {
     //     $.post(`${Paths.controller}back_budget_ror.php`, function (dados) {
