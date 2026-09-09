@@ -13,7 +13,7 @@ $(document).ready(function(){
         win.document.write(`
             <html>
             <head>
-                <script src="/vestcasa/assets/plugins/jsbarcode/JsBarcode.all.min.js"><\/script>
+                <script src="${Utils.appBase()}/assets/plugins/jsbarcode/JsBarcode.all.min.js"><\/script>
                 <style>
                     @media print {
                         @page { margin: 0; }
@@ -752,7 +752,7 @@ $(document).ready(function(){
             `;
             $('#produto-detalhe').append(html1);
 
-            const baseImg = "/vestcasa/assets/img/produtos/";
+            const baseImg = Utils.appBase() + "/assets/img/produtos/";
             const fallback = baseImg + "sem-imagem.png";
 
             let htmlIMG = `

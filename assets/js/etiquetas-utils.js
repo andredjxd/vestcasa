@@ -85,7 +85,7 @@ function gerarEtiquetasPDF(lista) {
     win.document.write(`
         <html>
         <head>
-            <script src="/vestcasa/assets/plugins/jsbarcode/JsBarcode.all.min.js"><\/script>
+            <script src="${Utils.appBase()}/assets/plugins/jsbarcode/JsBarcode.all.min.js"><\/script>
             <style>
                 @page { size: A4; margin: 6mm; }
                 body { margin: 0; font-family: Arial; }

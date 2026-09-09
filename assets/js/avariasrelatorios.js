@@ -287,8 +287,7 @@ $(document).ready(function(){
             return caminho;
         }
 
-        // projeto rodando em /vestcasa/
-        return '/vestcasa/' + caminho;
+        return Utils.appBase() + '/' + caminho;
     }
 
     function renderizarFotosExistentes(fotos) {

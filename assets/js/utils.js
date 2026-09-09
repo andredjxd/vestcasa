@@ -5,11 +5,18 @@
 // CAMINHOS GLOBAIS DO SISTEMA
 // ===============================
 
+// Caminho base da aplicacao, descoberto em tempo de execucao.
+// Retorna "" quando a app roda na raiz do dominio (ex: a2teck) ou
+// "/vestcasa" quando roda numa subpasta (ex: LXC original).
+function appBase() {
+    return window.location.pathname.replace(/\/view\/.*$/, '');
+}
+
 window.Paths = {
     controller: '../controller/',
     assets: '../assets/',
     api: '../controller/api/',
-    language: '../../../vestcasa/assets/plugins/datatables/pt-BR.json'
+    language: appBase() + '/assets/plugins/datatables/pt-BR.json'
 };
 
 // =====================================
@@ -17,6 +24,8 @@ window.Paths = {
 // =====================================
 
 window.Utils = {
+
+    appBase,
 
     formatarData(data) {
         if (!data) return '';
