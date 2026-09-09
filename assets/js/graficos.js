@@ -23,17 +23,21 @@ $(document).ready(function() {
                 realizedData.push(item.totalvendido !== null ? parseFloat(item.totalvendido) : null);
             });
     
+            const isDarkMode = document.documentElement.classList.contains('dark-mode');
+
             const vendas_chart_options = {  // <-- Renomeei a variável
                 series: [
                     // { name: 'Anterior', data: lowData },
                     { name: 'Meta', data: highData },
                     { name: 'Realizado', data: realizedData },
                 ],
+                theme: { mode: isDarkMode ? 'dark' : 'light' },
                 chart: {
                     height: 300,
                     width: '100%',
                     type: 'line',
                     toolbar: { show: true },
+                    background: 'transparent',
                 },
                 colors: ['#0d6efd', '#28a745'],
                 stroke: { curve: 'smooth' },
