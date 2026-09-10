@@ -3,10 +3,10 @@
 # Let's Encrypt). Este servico so entra na rede "traefik_public"
 # (externa, ja existente) - nao publica porta nenhuma direto no host.
 #
-# Banco: usa o MySQL/Percona que ja roda neste mesmo servidor
-# (servico "mysql", mantido sincronizado com o banco interno pelo
-# sync_vestcasa.py). A tabela vest_relatorio_fila_execucao NAO
-# replica de proposito, entao a Fila de Execucao nao funciona aqui.
+# Banco: MySQL/Percona dedicado ("vestcasa-mysql"), rodando no mesmo
+# node do app (evita latencia entre nodes do Swarm). Migrado a partir
+# do MySQL compartilhado (servico "mysql") em 2026-09-10; aquele
+# continua de pe, sem uso, como copia de seguranca temporaria.
 #
 # Rodar a partir da raiz do projeto:
 #   docker compose -f docker/docker-compose.yml --env-file docker/.env up -d --build
@@ -19,7 +19,7 @@ services:
         APACHE_CONF: vestcasa-root.conf
     image: vestcasa-app:latest
     environment:
-      - BD_SERVIDOR=mysql
+      - BD_SERVIDOR=vestcasa-mysql
       - BD_USUARIO=root
       - BD_SENHA=${BD_SENHA}
       - BD_BANCO=vestcasa
