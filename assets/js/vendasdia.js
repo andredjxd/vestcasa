@@ -289,8 +289,10 @@ $(document).ready(function(){
         
     //    <div class='card'><div class='card-header'><h3 class='card-title'>Diarização</h3></div>
     //             <table class='table table-striped table-sm'><thead><tr><th>Ano</th><th>Dias</th><th>Média</th></tr></thead><tbody id='mediadiaria-${month}'></tbody></table></div>
-    }  
-    VendaDia();
+    }
+    if (document.getElementById('venda-dia')) {
+        VendaDia();
+    }
     function DetalheVendaDia(data){
          $.post(Paths.controller + 'back_pdv_log.php',{data:data}, function(retorno) {
             // Limpa a tabela existente

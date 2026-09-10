@@ -202,7 +202,9 @@ $(document).ready(function(){
         });
         
     }
-    RelatorioDeposito();
+    if (document.getElementById('codtabDeposito')) {
+        RelatorioDeposito();
+    }
     // Relatorio das sangrias
     function RelatorioSangria(idRel){
         // toastr.success(idRel);

@@ -108,8 +108,10 @@ $(document).ready(function(){
         });
         
        
-    }  
-    precosAlterados();
+    }
+    if (document.getElementById('precosalterados')) {
+        precosAlterados();
+    }
 
     function DetalhePrecosAlterados(data){
          $.post(Paths.controller + 'back_ope_precos_alterados_detalhe.php',{data:data}, function(retorno) {

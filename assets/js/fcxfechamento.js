@@ -110,7 +110,9 @@ $(document).ready(function(){
         });
         
     }
-    RelatorioFechamento();
+    if (document.getElementById('codtabFechamento')) {
+        RelatorioFechamento();
+    }
         // Relatorio dos colaboradores
     function ViewFechamentoDia(data){
         // toastr.success(data, 'Teste !');

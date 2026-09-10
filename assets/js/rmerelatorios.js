@@ -141,7 +141,9 @@ $(document).ready(function(){
             infobox(aguardando,conferido,finalizado);
         });
     }
-    Recebimento();
+    if (document.getElementById('codtabRecebimento')) {
+        Recebimento();
+    }
 
     function ViewRecebimentoItem(chamado,datarecebimento,loja){
         // toastr.success(data, 'Teste !');

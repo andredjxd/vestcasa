@@ -166,8 +166,10 @@ $(document).ready(function(){
         });
         
     }
-    ConsultaProdutos();
-    // Ações para load 
+    if (document.getElementById('codtabConsulta')) {
+        ConsultaProdutos();
+    }
+    // Ações para load
     $(document).on('click','.syncRelat',function() {
         ConsultaProdutos();
     });

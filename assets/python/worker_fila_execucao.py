@@ -386,18 +386,28 @@ def worker():
             atualizar_status(cursor, processo_id, 1)
             conn.commit()
 
+            # Solta o lock e fecha a conexao antes do script longo (Selenium,
+            # etc.) - segurar uma conexao ociosa por dezenas de minutos faz o
+            # MySQL/proxy derrubá-la, deixando o lock preso "fantasma" ate o
+            # servidor perceber a queda. O status=1 no banco ja garante que
+            # nenhum outro worker pegue este item enquanto isso.
+            try:
+                cursor.execute("SELECT RELEASE_LOCK('worker_fila')")
+            except mysql.connector.Error:
+                pass
+            try:
+                cursor.close()
+                conn.close()
+            except mysql.connector.Error:
+                pass
+
             # Executa
             t0 = time.time()
             sucesso, log_exec = executar_script(processo_id, nome_script, parametros)
             elapsed = round(time.time() - t0, 1)
 
-            # Execucoes longas (Selenium, etc.) deixam a conexao ociosa
-            # tempo suficiente para o MySQL/proxy derrubá-la. Reconecta
-            # antes de salvar o status final.
-            try:
-                conn.ping(reconnect=True, attempts=3, delay=2)
-            except mysql.connector.Error:
-                conn = conectar_mysql()
+            # Conexao nova para salvar o resultado
+            conn = conectar_mysql()
             cursor = conn.cursor(dictionary=True)
 
             # Verifica se o script filho já finalizou o status
