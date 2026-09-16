@@ -4954,6 +4954,14 @@ def remover_itens_nao_existentes_no_banco(
             "Verificacao de itens fora do banco finalizada."
         )
 
+        # existentes_site ja reflete o estado atual do site (lido no
+        # topo da ultima iteracao do loop acima, momentos antes deste
+        # ponto) - devolve pro chamador para evitar que
+        # sincronizar_itens_avaria tenha que escanear a grade inteira
+        # de novo do zero logo em seguida (~30s+ de trabalho pesado do
+        # Chrome repetido a toa em toda avaria).
+        return existentes_site
+
     except Exception as e:
 
         logging.error(
@@ -4964,6 +4972,8 @@ def remover_itens_nao_existentes_no_banco(
             driver,
             "erro_remover_fora_banco"
         )
+
+        return None
 
 # ======================================================
 # SINCRONIZAR ITENS
@@ -5039,7 +5049,8 @@ def sincronizar_itens_avaria(
     fila_id=None,
     processados_inicial=0,
     total_progresso=None,
-    codigo_avaria=None
+    codigo_avaria=None,
+    existentes_iniciais=None
 ):
 
     total_itens = len(itens_banco)
@@ -5064,15 +5075,30 @@ def sincronizar_itens_avaria(
 
     try:
 
-        logging.info(
-            "Carregando resumo inicial dos itens do portal."
-        )
+        if existentes_iniciais is not None:
 
-        existentes_cache = validar_itens_existentes(
-            driver,
-            ler_detalhes=False,
-            log_linhas=False
-        )
+            # remover_itens_nao_existentes_no_banco ja escaneou a grade
+            # do portal momentos atras - reaproveita em vez de escanear
+            # tudo de novo (a mesma leitura pesada, ~30s de Chrome
+            # renderizando a grade inteira, repetida a toa).
+            logging.info(
+                "Reaproveitando leitura da grade ja feita "
+                "(sem re-escanear o portal)."
+            )
+
+            existentes_cache = existentes_iniciais
+
+        else:
+
+            logging.info(
+                "Carregando resumo inicial dos itens do portal."
+            )
+
+            existentes_cache = validar_itens_existentes(
+                driver,
+                ler_detalhes=False,
+                log_linhas=False
+            )
 
         indice_item = 0
 
@@ -7596,7 +7622,7 @@ def enviar_fotos_item_portal(driver, caminhos_fotos):
 # avaria inteira e seguro: itens ja sincronizados corretamente sao
 # detectados e pulados na hora, entao cada nova tentativa so precisa
 # terminar o que a anterior deixou faltando.
-MAX_TENTATIVAS = 3
+MAX_TENTATIVAS = 5
 
 inicio_execucao = datetime.now()
 
@@ -7668,7 +7694,7 @@ for tentativa in range(1, MAX_TENTATIVAS + 1):
             # ETAPA 1: VERIFICAR / REMOVER ITENS FORA DO BANCO
             # ==================================================
 
-            remover_itens_nao_existentes_no_banco(
+            existentes_apos_remocao = remover_itens_nao_existentes_no_banco(
                 driver,
                 itens_avaria
             )
@@ -7699,7 +7725,8 @@ for tentativa in range(1, MAX_TENTATIVAS + 1):
                 fila_id=fila_id,
                 processados_inicial=processados,
                 total_progresso=total_progresso,
-                codigo_avaria=codigoAvaria
+                codigo_avaria=codigoAvaria,
+                existentes_iniciais=existentes_apos_remocao
             )
 
             if not sincronizado:
