@@ -5067,6 +5067,19 @@ def sincronizar_itens_avaria(
 
         for indice_item, item_banco in enumerate(itens_banco, start=1):
 
+            # Libera memoria do processo Chrome a cada 5 itens. O driver
+            # ja sobe com --js-flags=--expose-gc (ver criar_driver), mas
+            # o window.gc() nunca era chamado - gc.collect() so libera
+            # objetos Python, nao o heap V8/Blink do navegador. Avarias
+            # com dezenas de itens/fotos numa unica sessao do Chrome
+            # acumulavam memoria ate estourar o OOM do servidor.
+            if indice_item % 5 == 0:
+                try:
+                    driver.execute_script("if (window.gc) { window.gc(); }")
+                except Exception:
+                    pass
+                gc.collect()
+
             codigo_barras = str(
                 item_banco["codigo_barras"]
             ).strip()
