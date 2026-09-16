@@ -7517,38 +7517,50 @@ def enviar_fotos_item_portal(driver, caminhos_fotos):
             return True
 
         # ==================================================
-        # CLICA NA aREA DE UPLOAD ANTES DE ENVIAR
-        # Isso forca o componente a limpar preview visual
+        # ENVIA UMA FOTO POR VEZ
+        # Enviar todas de uma vez num so send_keys (varios caminhos
+        # separados por \n) crashava a aba do Chrome de forma 100%
+        # reproduzivel - o portal parece nao aguentar processar mais de
+        # um arquivo simultaneamente no preview client-side. Enviando
+        # uma por vez (recarregando a area de upload a cada uma) o
+        # portal so precisa processar um arquivo por vez.
         # ==================================================
-        clicar_area_upload_limpar_preview(driver)
 
-        time.sleep(1)
+        for indice_foto, caminho_foto in enumerate(fotos_validas, start=1):
 
-        input_file = localizar_input_upload_fotos(driver)
+            clicar_area_upload_limpar_preview(driver)
 
-        if not input_file:
-            return False
+            time.sleep(1)
 
-        arquivos_para_upload = "\n".join(fotos_validas)
+            input_file = localizar_input_upload_fotos(driver)
 
-        input_file.send_keys(arquivos_para_upload)
+            if not input_file:
+                logging.error(
+                    f"Input de upload nao encontrado para foto "
+                    f"{indice_foto}/{len(fotos_validas)}."
+                )
+                return False
+
+            input_file.send_keys(caminho_foto)
+
+            logging.info(
+                f"Foto {indice_foto}/{len(fotos_validas)} enviada "
+                f"para o portal."
+            )
+
+            # Da tempo do portal gerar o preview client-side de UM
+            # arquivo antes de seguir para o proximo (ou para a proxima
+            # interacao, no ultimo).
+            time.sleep(4)
+
+            try:
+                driver.execute_script("if (window.gc) { window.gc(); }")
+            except Exception:
+                pass
 
         logging.info(
             f"{len(fotos_validas)} foto(s) enviada(s) para o portal."
         )
-
-        # O portal gera preview das fotos no client-side (React) apos o
-        # input disparar o evento de selecao. Com 2s a interacao seguinte
-        # (selecionar tipo avaria) chegava antes desse processamento
-        # terminar, deixando a thread principal do Chrome sem resposder
-        # ate o timeout de 120s e a aba crashar. 10s da folga real pro
-        # preview terminar antes de seguir.
-        time.sleep(10)
-
-        try:
-            driver.execute_script("if (window.gc) { window.gc(); }")
-        except Exception:
-            pass
 
         return True
 
