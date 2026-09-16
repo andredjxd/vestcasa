@@ -6260,9 +6260,16 @@ def inserir_itens_avaria(
                     f"Insercao {i + 1}/{quantidade}"
                 )
 
-                if i == 0:
-
-                    limpar_input_upload_fotos_portal(driver)
+                # ponytail: limpar_input_upload_fotos_portal() dispara
+                # eventos "input"/"change" sinteticos via JS em todo
+                # input[type=file] da pagina. Isso correlacionava 100%
+                # com a aba do Chrome travando/crashando logo depois,
+                # bem antes de qualquer foto real ser enviada (fotos
+                # so vao pra galeria por item, mais adiante). Removido
+                # ate confirmar se o portal realmente precisa desse
+                # reset - se sobrar preview de foto de item anterior
+                # grudado, revisitar com um approach que nao dispare
+                # eventos sinteticos (ex: clicar de verdade na area).
 
                 time.sleep(0.5)
 
