@@ -499,18 +499,29 @@ def forcar_gc_chrome(driver):
 
 def salvar_screenshot(driver, nome):
 
-    pasta = "screenshots"
+    try:
 
-    os.makedirs(pasta, exist_ok=True)
+        pasta = "screenshots"
 
-    arquivo = os.path.join(
-        pasta,
-        f"{nome}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-    )
+        os.makedirs(pasta, exist_ok=True)
 
-    driver.save_screenshot(arquivo)
+        arquivo = os.path.join(
+            pasta,
+            f"{nome}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        )
 
-    logging.info(f"Screenshot salva: {arquivo}")
+        driver.save_screenshot(arquivo)
+
+        logging.info(f"Screenshot salva: {arquivo}")
+
+    except Exception as e:
+
+        # driver/aba ja pode ter morrido (ex: "tab crashed") - nao deixa
+        # a tentativa de screenshot mascarar o erro real com um segundo
+        # traceback em cascata.
+        logging.warning(
+            f"Nao foi possivel salvar screenshot '{nome}': {repr(e)}"
+        )
 
 # ======================================================
 # AGUARDAR ELEMENTO
@@ -7547,227 +7558,259 @@ def enviar_fotos_item_portal(driver, caminhos_fotos):
 # EXECUcaO
 # ======================================================
 
+# O portal de avarias e uma SPA pesada (MUI/React) que, sob automacao
+# prolongada, pode deixar a aba do Chrome sem resposta (timeout de
+# comando) e crashar ("tab crashed"). Como cada item so e inserido se
+# a quantidade no site ainda nao bate com o banco (ver
+# sincronizar_itens_avaria), reiniciar o navegador do zero e repetir a
+# avaria inteira e seguro: itens ja sincronizados corretamente sao
+# detectados e pulados na hora, entao cada nova tentativa so precisa
+# terminar o que a anterior deixou faltando.
+MAX_TENTATIVAS = 3
+
 inicio_execucao = datetime.now()
 
 print("\n+------------------------------------------------------+")
 print("INICIO:", inicio_execucao.strftime("%d/%m/%Y %H:%M:%S"))
 print("+------------------------------------------------------+\n")
 
-driver = None
 execucao_ok = False
+ultimo_erro = None
 
-try:
+for tentativa in range(1, MAX_TENTATIVAS + 1):
 
-    with mysql_connection() as conn:
+    driver = None
 
-        atualizar_status(
-            conn,
-            fila_id,
-            status=1
+    if tentativa > 1:
+
+        logging.warning(
+            f"Retentativa {tentativa}/{MAX_TENTATIVAS} apos falha - "
+            f"reiniciando navegador (itens ja sincronizados serao "
+            f"pulados automaticamente)."
         )
 
-        driver = criar_driver()
+        time.sleep(5)
 
-        fazer_login(driver)
+    try:
 
-        abrir_menu_estoque(driver)
+        with mysql_connection() as conn:
 
-        abrir_controle_avaria(driver)
-
-        dados = listar_tabela_avarias(driver)
-
-        salvar_avarias_mysql(conn, dados)
-
-        testar_checkbox(driver)
-
-        abrir_detalhe_avaria(driver, codigoAvaria)
-
-        itens_avaria = consultar_itens_avaria(
-            conn,
-            codigoAvaria
-        )
-
-        total_progresso = len(itens_avaria) + 1
-        processados = 0
-
-        atualizar_status(
-            conn,
-            fila_id,
-            status=1,
-            progresso=0,
-            processados=0,
-            total=total_progresso
-        )
-
-        # ==================================================
-        # ETAPA 1: VERIFICAR / REMOVER ITENS FORA DO BANCO
-        # ==================================================
-
-        remover_itens_nao_existentes_no_banco(
-            driver,
-            itens_avaria
-        )
-
-        processados += 1
-
-        cursor_progresso = conn.cursor()
-
-        atualizar_progresso(
-            cursor_progresso,
-            conn,
-            fila_id,
-            processados,
-            total_progresso
-        )
-
-        cursor_progresso.close()
-
-        # ==================================================
-        # ETAPA 2: SINCRONIZAR ITENS DO BANCO
-        # Mesmo item sem alteracao conta como processado
-        # ==================================================
-
-        sincronizado = sincronizar_itens_avaria(
-            driver,
-            conn,
-            itens_avaria,
-            fila_id=fila_id,
-            processados_inicial=processados,
-            total_progresso=total_progresso,
-            codigo_avaria=codigoAvaria
-        )
-
-        if not sincronizado:
-
-            logging.error(
-                "Sincronizacao finalizada com erro."
+            atualizar_status(
+                conn,
+                fila_id,
+                status=1
             )
 
-            raise Exception(
-                "Sincronizacao finalizada com erro."
-            )
-        else:
+            driver = criar_driver()
 
+            fazer_login(driver)
+
+            abrir_menu_estoque(driver)
+
+            abrir_controle_avaria(driver)
+
+            dados = listar_tabela_avarias(driver)
+
+            salvar_avarias_mysql(conn, dados)
+
+            testar_checkbox(driver)
+
+            abrir_detalhe_avaria(driver, codigoAvaria)
+
+            itens_avaria = consultar_itens_avaria(
+                conn,
+                codigoAvaria
+            )
+
+            total_progresso = len(itens_avaria) + 1
+            processados = 0
+
+            atualizar_status(
+                conn,
+                fila_id,
+                status=1,
+                progresso=0,
+                processados=0,
+                total=total_progresso
+            )
+
+            # ==================================================
+            # ETAPA 1: VERIFICAR / REMOVER ITENS FORA DO BANCO
+            # ==================================================
+
+            remover_itens_nao_existentes_no_banco(
+                driver,
+                itens_avaria
+            )
+
+            processados += 1
+
+            cursor_progresso = conn.cursor()
+
+            atualizar_progresso(
+                cursor_progresso,
+                conn,
+                fila_id,
+                processados,
+                total_progresso
+            )
+
+            cursor_progresso.close()
+
+            # ==================================================
+            # ETAPA 2: SINCRONIZAR ITENS DO BANCO
+            # Mesmo item sem alteracao conta como processado
+            # ==================================================
+
+            sincronizado = sincronizar_itens_avaria(
+                driver,
+                conn,
+                itens_avaria,
+                fila_id=fila_id,
+                processados_inicial=processados,
+                total_progresso=total_progresso,
+                codigo_avaria=codigoAvaria
+            )
+
+            if not sincronizado:
+
+                logging.error(
+                    "Sincronizacao finalizada com erro."
+                )
+
+                raise Exception(
+                    "Sincronizacao finalizada com erro."
+                )
+            else:
+
+                logging.info(
+                    "Sincronizacao finalizada com sucesso."
+                )
+
+            processar_update_dados_site_para_banco(
+                driver,
+                conn,
+                codigoAvaria
+            )
+
+            # ==================================================
+            # IMPLEMENTAR PROCESSOS AQUI
+            # ==================================================
+
+            # Exemplo:
+            #
+            # atualizar_status(
+            #     conn,
+            #     fila_id,
+            #     progresso=10,
+            #     processados=1,
+            #     total=10
+            # )
+
+            time.sleep(3)
+
+            # ==================================================
+            # FINALIZAcaO
+            # ==================================================
+
+            fim_execucao = datetime.now()
+
+            tempo_formatado, total_segundos = calcular_tempo_execucao(
+                inicio_execucao,
+                fim_execucao
+            )
+
+            logging.info(f"Fim execucao: {fim_execucao}")
             logging.info(
-                "Sincronizacao finalizada com sucesso."
+                f"Tempo total: {tempo_formatado} "
+                f"({total_segundos}s)"
             )
 
-        processar_update_dados_site_para_banco(
-            driver,
-            conn,
-            codigoAvaria
-        )
+            atualizar_status(
+                conn,
+                fila_id,
+                status=2,
+                progresso=100,
+                processados=total_progresso,
+                total=total_progresso,
+                finalizar=True
+            )
 
-        # ==================================================
-        # IMPLEMENTAR PROCESSOS AQUI
-        # ==================================================
+            logging.info("Execucao finalizada com sucesso.")
 
-        # Exemplo:
-        #
-        # atualizar_status(
-        #     conn,
-        #     fila_id,
-        #     progresso=10,
-        #     processados=1,
-        #     total=10
-        # )
+            execucao_ok = True
 
-        time.sleep(3)
+        break  # sucesso - nao precisa de outra tentativa
 
-        # ==================================================
-        # FINALIZAcaO
-        # ==================================================
+    except KeyboardInterrupt:
 
-        fim_execucao = datetime.now()
+        ultimo_erro = "Execucao interrompida pelo usuario."
 
-        tempo_formatado, total_segundos = calcular_tempo_execucao(
-            inicio_execucao,
-            fim_execucao
-        )
+        logging.warning(ultimo_erro)
 
-        logging.info(f"Fim execucao: {fim_execucao}")
-        logging.info(
-            f"Tempo total: {tempo_formatado} "
-            f"({total_segundos}s)"
-        )
+        with mysql_connection() as conn:
+            atualizar_status(
+                conn,
+                fila_id,
+                status=3,
+                log_texto=ultimo_erro,
+                finalizar=True
+            )
 
-        atualizar_status(
-            conn,
-            fila_id,
-            status=2,
-            progresso=100,
-            processados=total_progresso,
-            total=total_progresso,
-            finalizar=True
-        )
+        break
 
-        logging.info("Execucao finalizada com sucesso.")
+    except TimeoutException as e:
 
-        execucao_ok = True
+        ultimo_erro = f"Timeout: {str(e)}"
 
-except KeyboardInterrupt:
+        logging.error(ultimo_erro)
 
-    erro = "Execucao interrompida pelo usuario."
+        traceback.print_exc()
 
-    logging.warning(erro)
+        if driver:
+            salvar_screenshot(driver, f"timeout_tentativa{tentativa}")
 
-    with mysql_connection() as conn:
-        atualizar_status(
-            conn,
-            fila_id,
-            status=3,
-            log_texto=erro,
-            finalizar=True
-        )
+        if tentativa >= MAX_TENTATIVAS:
+            with mysql_connection() as conn:
+                atualizar_status(
+                    conn,
+                    fila_id,
+                    status=3,
+                    log_texto=ultimo_erro,
+                    finalizar=True
+                )
 
-except TimeoutException as e:
+    except Exception as e:
 
-    erro = f"Timeout: {str(e)}"
+        ultimo_erro = traceback.format_exc()
 
-    logging.error(erro)
+        logging.error(ultimo_erro)
 
-    traceback.print_exc()
+        if driver:
+            salvar_screenshot(driver, f"erro_tentativa{tentativa}")
 
-    if driver:
-        salvar_screenshot(driver, "timeout")
+        if tentativa >= MAX_TENTATIVAS:
+            with mysql_connection() as conn:
+                atualizar_status(
+                    conn,
+                    fila_id,
+                    status=3,
+                    log_texto=ultimo_erro,
+                    finalizar=True
+                )
 
-    with mysql_connection() as conn:
-        atualizar_status(
-            conn,
-            fila_id,
-            status=3,
-            log_texto=erro,
-            finalizar=True
-        )
+    finally:
 
-except Exception as e:
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass
 
-    erro = traceback.format_exc()
-
-    logging.error(erro)
-
-    if driver:
-        salvar_screenshot(driver, "erro")
-
-    with mysql_connection() as conn:
-        atualizar_status(
-            conn,
-            fila_id,
-            status=3,
-            log_texto=erro,
-            finalizar=True
-        )
-
-finally:
-
-    if driver:
-        # input("\nPressione ENTER para finalizar...")
-        if execucao_ok:
-            print("\nExecucao finalizada com sucesso!")
-        else:
-            print("\nExecucao encerrada sem sucesso.")
-        driver.quit()
-
-    print("\n+------------------------------------------------------+")
-    print("PROCESSO FINALIZADO")
-    print("+------------------------------------------------------+\n")
+print("\n+------------------------------------------------------+")
+if execucao_ok:
+    print("Execucao finalizada com sucesso!")
+else:
+    print("Execucao encerrada sem sucesso.")
+print("PROCESSO FINALIZADO")
+print("+------------------------------------------------------+\n")
