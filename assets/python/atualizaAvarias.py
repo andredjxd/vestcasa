@@ -7537,7 +7537,18 @@ def enviar_fotos_item_portal(driver, caminhos_fotos):
             f"{len(fotos_validas)} foto(s) enviada(s) para o portal."
         )
 
-        time.sleep(2)
+        # O portal gera preview das fotos no client-side (React) apos o
+        # input disparar o evento de selecao. Com 2s a interacao seguinte
+        # (selecionar tipo avaria) chegava antes desse processamento
+        # terminar, deixando a thread principal do Chrome sem resposder
+        # ate o timeout de 120s e a aba crashar. 10s da folga real pro
+        # preview terminar antes de seguir.
+        time.sleep(10)
+
+        try:
+            driver.execute_script("if (window.gc) { window.gc(); }")
+        except Exception:
+            pass
 
         return True
 
@@ -7814,3 +7825,11 @@ else:
     print("Execucao encerrada sem sucesso.")
 print("PROCESSO FINALIZADO")
 print("+------------------------------------------------------+\n")
+
+# salvar_screenshot() agora engole sua propria excecao quando o driver
+# ja morreu, entao nao da mais pra contar com um crash em cascata pra
+# sinalizar falha pro processo pai (worker_fila_execucao.py le o
+# returncode do subprocesso). Sem isso o job aparecia como "sucesso"
+# mesmo tendo esgotado as tentativas e ficado com status=erro no banco.
+if not execucao_ok:
+    sys.exit(1)
